@@ -20,14 +20,11 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git-core gnupg flex bison build-essential zip curl \
-            zlib1g-dev libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev \
-            lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig \
-            liblz4-tool libssl-dev python3 python3-pip ccache repo
-          sudo apt-get clean
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig liblz4-tool libssl-dev python3 python3-pip ccache repo
 
-      - name: Setup & Run Build
+      - name: Setup and Build AOSP
         run: |
+          set -e
           git config --global user.name "Moktar"
           git config --global user.email "moktar@example.com"
           
@@ -38,23 +35,23 @@ jobs:
           WORK_DIR="/tmp/aosp_13"
           OUT_DIR="/tmp/out"
           OUTPUT="/tmp/output"
-          mkdir -p $WORK_DIR $OUT_DIR $OUTPUT /tmp/ccache /tmp/tmp
+          mkdir -p "$WORK_DIR" "$OUT_DIR" "$OUTPUT" /tmp/ccache /tmp/tmp
           
-          cd $WORK_DIR
+          cd "$WORK_DIR"
           
           repo init -u https://android.googlesource.com/platform/manifest -b android-13.0.0_r1 --depth=1 --no-repo-verify
           repo sync -c -j2 --no-tags --no-clone-bundle --force-sync --no-manifest-update || true
           
-          # Clean heavy folders
+          # Clean
           for d in external/chromium-webview external/noto-fonts cts test kernel/tests tools/treble tools/trebuchet; do
-            rm -rf "$WORK_DIR/$d" 2>/dev/null && echo "🗑️ Removed $d"
+            rm -rf "$WORK_DIR/$d" 2>/dev/null || true
           done
           
-          # Create Device Tree
+          # Device Tree
           DT="$WORK_DIR/device/samsung/a22"
           mkdir -p "$DT"
           
-          cat > "$DT/BoardConfig.mk" << 'EOF'
+          cat > "$DT/BoardConfig.mk" << 'EOL'
 TARGET_ARCH := x86_64
 TARGET_ARCH_VARIANT := x86_64
 TARGET_CPU_ABI := x86_64
@@ -74,18 +71,18 @@ BOARD_AVB_ENABLE := false
 BOARD_DEBUGFS_RESTRICTIONS := true
 BUILD_BROKEN_DUP_RULES := true
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
-EOF
+EOL
 
-          cat > "$DT/AndroidProducts.mk" << 'EOF'
+          cat > "$DT/AndroidProducts.mk" << 'EOL'
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/a22.mk
 COMMON_LUNCH_CHOICES := a22-userdebug
-EOF
+EOL
 
-          cat > "$DT/vendorsetup.sh" << 'EOF'
+          cat > "$DT/vendorsetup.sh" << 'EOL'
 add_lunch_combo a22-userdebug
-EOF
+EOL
 
-          cat > "$DT/a22.mk" << 'EOF'
+          cat > "$DT/a22.mk" << 'EOL'
 $(call inherit-product, $(SRC_TARGET_DIR)/product/sdk_phone_x86_64.mk)
 PRODUCT_NAME := a22
 PRODUCT_DEVICE := a22
@@ -102,7 +99,7 @@ PRODUCT_SYSTEM_PROPERTIES += \
     ro.debuggable=0 \
     ro.build.version.release=13 \
     ro.build.version.sdk=33
-EOF
+EOL
 
           echo "✅ Device Tree Ready!"
 
@@ -112,9 +109,9 @@ EOF
           export USE_CCACHE=1
           export CCACHE_DIR=/tmp/ccache
           
-          source build/envsetup.sh && lunch a22-userdebug && m -j2 systemimage 2>&1 | tee $OUTPUT/build_log.txt || true
+          source build/envsetup.sh && lunch a22-userdebug && m -j2 systemimage 2>&1 | tee "$OUTPUT/build_log.txt" || true
           
-          ls -lh $OUTPUT/
+          ls -lh "$OUTPUT/"
 
       - name: tmate SSH Session
         uses: mxschmitt/action-tmate@v3
