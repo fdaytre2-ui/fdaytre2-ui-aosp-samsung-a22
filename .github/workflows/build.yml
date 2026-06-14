@@ -28,86 +28,64 @@ jobs:
           (while true; do echo "[$(date '+%H:%M:%S')] alive..."; sleep 120; done) &
           git config --global user.name "Moktar"
           git config --global user.email "moktar@example.com"
-
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
-          mkdir -p $WORK_DIR
-          cd $WORK_DIR
-
+          mkdir -p $WORK_DIR && cd $WORK_DIR
           repo init -u https://android.googlesource.com/platform/manifest \
             -b android-13.0.0_r1 --depth=1 --no-repo-verify
-
           repo sync -c -j4 --no-tags --no-clone-bundle --force-sync --no-manifest-update || true
-
           rm -rf external/chromium-webview external/noto-fonts \
-            cts test kernel/tests tools/treble tools/trebuchet \
-            art/test 2>/dev/null || true
-
-          echo "Sync done"
+            cts test kernel/tests tools/treble tools/trebuchet art/test 2>/dev/null || true
           df -h .
 
       - name: Pre-Build Checks
         run: |
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
           cd $WORK_DIR
-
-          echo "=== Checking problem modules ==="
           for dir in art/test cts test external/chromium-webview; do
-            if [ -d "$dir" ]; then
-              echo "REMOVING $dir"
-              rm -rf "$dir"
-            else
-              echo "OK: $dir"
-            fi
+            [ -d "$dir" ] && rm -rf "$dir" && echo "REMOVED $dir" || echo "OK: $dir"
           done
-
-          echo "=== Checking csuite_test ==="
           FILES=$(grep -r "csuite_test" --include="*.bp" -l 2>/dev/null || true)
           if [ -n "$FILES" ]; then
-            echo "Found csuite_test in:"
-            echo "$FILES"
             echo "$FILES" | xargs -I{} dirname {} | sort -u | xargs rm -rf 2>/dev/null || true
-            echo "Removed!"
+            echo "Removed csuite_test modules"
           else
-            echo "OK: no csuite_test found"
+            echo "OK: no csuite_test"
           fi
-
-          echo "=== Disk Space ==="
           df -h .
 
       - name: Write Device Tree
         run: |
-          WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
-          mkdir -p $WORK_DIR/device/samsung/a22
-          DT="$WORK_DIR/device/samsung/a22"
-
-          cat > $DT/BoardConfig.mk << 'MK'
-TARGET_ARCH := x86_64
-TARGET_ARCH_VARIANT := x86_64
-TARGET_CPU_ABI := x86_64
-TARGET_CPU_ABI2 :=
-TARGET_CPU_VARIANT := x86_64
-TARGET_2ND_ARCH := x86
-TARGET_2ND_ARCH_VARIANT := x86_64
-TARGET_2ND_CPU_ABI := x86
-TARGET_2ND_CPU_ABI2 :=
-TARGET_2ND_CPU_VARIANT := generic
-TARGET_BOARD_PLATFORM := mt6769t
-TARGET_BOOTLOADER_BOARD_NAME := a22
-BOARD_SYSTEMIMAGE_PARTITION_SIZE := 3221225472
-BOARD_USERDATAIMAGE_PARTITION_SIZE := 2147483648
-BOARD_CACHEIMAGE_PARTITION_SIZE := 268435456
-BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
-TARGET_USERIMAGES_USE_EXT4 := true
-BOARD_AVB_ENABLE := false
-BOARD_DEBUGFS_RESTRICTIONS := true
-BUILD_BROKEN_DUP_RULES := true
-BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
-MK
-
+          DT="$GITHUB_WORKSPACE/aosp_13/device/samsung/a22"
+          mkdir -p $DT
+          printf 'TARGET_ARCH := x86_64\n' > $DT/BoardConfig.mk
+          printf 'TARGET_ARCH_VARIANT := x86_64\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_CPU_ABI := x86_64\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_CPU_ABI2 :=\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_CPU_VARIANT := x86_64\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_2ND_ARCH := x86\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_2ND_ARCH_VARIANT := x86_64\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_2ND_CPU_ABI := x86\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_2ND_CPU_ABI2 :=\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_2ND_CPU_VARIANT := generic\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_BOARD_PLATFORM := mt6769t\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_BOOTLOADER_BOARD_NAME := a22\n' >> $DT/BoardConfig.mk
+          printf 'BOARD_SYSTEMIMAGE_PARTITION_SIZE := 3221225472\n' >> $DT/BoardConfig.mk
+          printf 'BOARD_USERDATAIMAGE_PARTITION_SIZE := 2147483648\n' >> $DT/BoardConfig.mk
+          printf 'BOARD_CACHEIMAGE_PARTITION_SIZE := 268435456\n' >> $DT/BoardConfig.mk
+          printf 'BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4\n' >> $DT/BoardConfig.mk
+          printf 'TARGET_USERIMAGES_USE_EXT4 := true\n' >> $DT/BoardConfig.mk
+          printf 'BOARD_AVB_ENABLE := false\n' >> $DT/BoardConfig.mk
+          printf 'BOARD_DEBUGFS_RESTRICTIONS := true\n' >> $DT/BoardConfig.mk
+          printf 'BUILD_BROKEN_DUP_RULES := true\n' >> $DT/BoardConfig.mk
+          printf 'BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true\n' >> $DT/BoardConfig.mk
           printf 'PRODUCT_MAKEFILES := $(LOCAL_DIR)/a22.mk\nCOMMON_LUNCH_CHOICES := a22-userdebug\n' > $DT/AndroidProducts.mk
           printf 'add_lunch_combo a22-userdebug\n' > $DT/vendorsetup.sh
-          printf '$(call inherit-product, $(SRC_TARGET_DIR)/product/sdk_phone_x86_64.mk)\nPRODUCT_NAME := a22\nPRODUCT_DEVICE := a22\nPRODUCT_BRAND := samsung\nPRODUCT_MODEL := SM-A225F\nPRODUCT_MANUFACTURER := samsung\n' > $DT/a22.mk
-
+          printf '$(call inherit-product, $(SRC_TARGET_DIR)/product/sdk_phone_x86_64.mk)\n' > $DT/a22.mk
+          printf 'PRODUCT_NAME := a22\n' >> $DT/a22.mk
+          printf 'PRODUCT_DEVICE := a22\n' >> $DT/a22.mk
+          printf 'PRODUCT_BRAND := samsung\n' >> $DT/a22.mk
+          printf 'PRODUCT_MODEL := SM-A225F\n' >> $DT/a22.mk
+          printf 'PRODUCT_MANUFACTURER := samsung\n' >> $DT/a22.mk
           echo "Device Tree Ready!"
           cat $DT/BoardConfig.mk
 
@@ -118,26 +96,17 @@ MK
           OUTPUT="$GITHUB_WORKSPACE/output"
           CCACHE_DIR="$GITHUB_WORKSPACE/ccache"
           mkdir -p $OUT_DIR $OUTPUT $CCACHE_DIR
-
           cd $WORK_DIR
           export OUT_DIR=$OUT_DIR
           export USE_CCACHE=1
           export CCACHE_DIR=$CCACHE_DIR
           ccache -M 10G
-
           source build/envsetup.sh && lunch a22-userdebug && \
             m -j2 systemimage 2>&1 | tee $OUTPUT/build_log.txt || true
-
           for img in system.img ramdisk.img vendor.img userdata.img; do
             src="$OUT_DIR/target/product/a22/$img"
-            if [ -f "$src" ]; then
-              cp -v $src $OUTPUT/
-              echo "OK $img"
-            else
-              echo "NOT FOUND $img"
-            fi
+            [ -f "$src" ] && cp -v $src $OUTPUT/ && echo "OK $img" || echo "NOT FOUND $img"
           done
-
           ls -lh $OUTPUT/
           echo "DONE!"
 
