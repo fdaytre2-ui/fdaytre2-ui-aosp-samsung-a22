@@ -65,7 +65,7 @@ jobs:
           "TARGET_2ND_ARCH_VARIANT := x86_64\n"
           "TARGET_2ND_CPU_ABI := x86\n"
           "TARGET_2ND_CPU_ABI2 :=\n"
-          "TARGET_2ND_CPU_VARIANT := x86_64\n"
+          "TARGET_2ND_CPU_VARIANT := generic\n"
           "TARGET_BOARD_PLATFORM := mt6769t\n"
           "TARGET_BOOTLOADER_BOARD_NAME := a22\n"
           "BOARD_SYSTEMIMAGE_PARTITION_SIZE := 3221225472\n"
