@@ -113,7 +113,7 @@ EOF
           export CCACHE_DIR=/tmp/ccache
           
           source build/envsetup.sh && lunch a22-userdebug && m -j2 systemimage 2>&1 | tee $OUTPUT/build_log.txt || true
-
+          
           ls -lh $OUTPUT/
 
       - name: tmate SSH Session
