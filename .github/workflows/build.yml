@@ -44,7 +44,21 @@ jobs:
           echo "=== Removing known problematic dirs ==="
           rm -rf \
             external/chromium-webview \
+            external/chromium \
             external/noto-fonts \
+            external/rust \
+            external/v8 \
+            external/skia \
+            external/angle \
+            external/libchrome \
+            external/webrtc \
+            external/googletest \
+            external/libgtest \
+            external/libunwind \
+            external/libcxx/test \
+            external/compiler-rt/test \
+            external/boringssl/src/crypto/test \
+            frameworks/webview \
             cts \
             test \
             kernel/tests \
@@ -52,14 +66,31 @@ jobs:
             tools/trebuchet \
             art/test \
             art/compiler \
+            art/libartpalette \
+            packages/apps/ \
+            packages/tests/ \
+            packages/modules/Connectivity/tests \
+            vendor/*/tests \
+            hardware/*/tests \
+            prebuilts/*/test* \
+            prebuilts/build-tools/tests \
             2>/dev/null || true
+
+          echo "=== Removing all tests dirs inside packages/modules ==="
+          find packages/modules -type d -name "tests" | xargs rm -rf 2>/dev/null || true
+          find packages/modules -type d -name "test" | xargs rm -rf 2>/dev/null || true
 
           echo "=== Removing csuite_test dirs ==="
           grep -r "csuite_test" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
 
-          echo "=== Removing art_gtest_defaults references ==="
+          echo "=== Removing cts_defaults dirs ==="
+          grep -r "cts_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
+            rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
+          done || true
+
+          echo "=== Removing art_gtest_defaults dirs ==="
           grep -r "art_gtest_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
@@ -92,6 +123,7 @@ jobs:
           printf 'BOARD_DEBUGFS_RESTRICTIONS := true\n' >> $DT/BoardConfig.mk
           printf 'BUILD_BROKEN_DUP_RULES := true\n' >> $DT/BoardConfig.mk
           printf 'BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true\n' >> $DT/BoardConfig.mk
+          printf 'DISABLE_DEXPREOPT := true\n' >> $DT/BoardConfig.mk
           printf 'PRODUCT_MAKEFILES := $(LOCAL_DIR)/a22.mk\nCOMMON_LUNCH_CHOICES := a22-userdebug\n' > $DT/AndroidProducts.mk
           printf 'add_lunch_combo a22-userdebug\n' > $DT/vendorsetup.sh
           printf '$(call inherit-product, $(SRC_TARGET_DIR)/product/sdk_phone_x86_64.mk)\n' > $DT/a22.mk
