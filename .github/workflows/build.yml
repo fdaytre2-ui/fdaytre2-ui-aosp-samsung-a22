@@ -33,24 +33,41 @@ jobs:
           repo init -u https://android.googlesource.com/platform/manifest \
             -b android-13.0.0_r1 --depth=1 --no-repo-verify
           repo sync -c -j4 --no-tags --no-clone-bundle --force-sync --no-manifest-update || true
-          rm -rf external/chromium-webview external/noto-fonts \
-            cts test kernel/tests tools/treble tools/trebuchet art/test 2>/dev/null || true
           df -h .
 
-      - name: Pre-Build Checks
+      - name: Clean Problematic Modules
         run: |
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
           cd $WORK_DIR
-          for dir in art/test cts test external/chromium-webview; do
-            [ -d "$dir" ] && rm -rf "$dir" && echo "REMOVED $dir" || echo "OK: $dir"
-          done
-          FILES=$(grep -r "csuite_test" --include="*.bp" -l 2>/dev/null || true)
-          if [ -n "$FILES" ]; then
-            echo "$FILES" | xargs -I{} dirname {} | sort -u | xargs rm -rf 2>/dev/null || true
-            echo "Removed csuite_test modules"
-          else
-            echo "OK: no csuite_test"
-          fi
+
+          echo "=== Removing known problematic dirs ==="
+          rm -rf \
+            external/chromium-webview \
+            external/noto-fonts \
+            cts \
+            test \
+            kernel/tests \
+            tools/treble \
+            tools/trebuchet \
+            art/test \
+            art/compiler/tests \
+            2>/dev/null || true
+
+          echo "=== Removing csuite_test references ==="
+          grep -r "csuite_test" --include="*.bp" -l 2>/dev/null | while read f; do
+            dir=$(dirname "$f")
+            echo "Removing dir: $dir"
+            rm -rf "$dir"
+          done || true
+
+          echo "=== Removing art_gtest_defaults references ==="
+          grep -r "art_gtest_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
+            echo "Patching: $f"
+            sed -i '/art_gtest_defaults/d' "$f"
+            sed -i '/art_compiler_host_tests/d' "$f"
+          done || true
+
+          echo "=== Disk after clean ==="
           df -h .
 
       - name: Write Device Tree
@@ -86,7 +103,7 @@ jobs:
           printf 'PRODUCT_BRAND := samsung\n' >> $DT/a22.mk
           printf 'PRODUCT_MODEL := SM-A225F\n' >> $DT/a22.mk
           printf 'PRODUCT_MANUFACTURER := samsung\n' >> $DT/a22.mk
-          echo "Device Tree Ready!"
+          echo "=== Device Tree Ready ==="
           cat $DT/BoardConfig.mk
 
       - name: Build AOSP
@@ -105,10 +122,10 @@ jobs:
             m -j2 systemimage 2>&1 | tee $OUTPUT/build_log.txt || true
           for img in system.img ramdisk.img vendor.img userdata.img; do
             src="$OUT_DIR/target/product/a22/$img"
-            [ -f "$src" ] && cp -v $src $OUTPUT/ && echo "OK $img" || echo "NOT FOUND $img"
+            [ -f "$src" ] && cp -v $src $OUTPUT/ && echo "OK: $img" || echo "NOT FOUND: $img"
           done
           ls -lh $OUTPUT/
-          echo "DONE!"
+          echo "=== DONE ==="
 
       - name: Upload Artifacts
         if: always()
