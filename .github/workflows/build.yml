@@ -32,7 +32,8 @@ jobs:
           mkdir -p $WORK_DIR && cd $WORK_DIR
           repo init -u https://android.googlesource.com/platform/manifest \
             -b android-13.0.0_r1 --depth=1 --no-repo-verify
-          repo sync -c -j4 --no-tags --no-clone-bundle --force-sync --no-manifest-update || true
+          repo sync -c -j4 --no-tags --no-clone-bundle --force-sync --retry-fetches=3 || true
+          echo "=== Sync done, dirs: $(ls | wc -l) ==="
           df -h .
 
       - name: Clean Problematic Modules
@@ -60,12 +61,6 @@ jobs:
 
           echo "=== Removing art_gtest_defaults references ==="
           grep -r "art_gtest_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
-            rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
-          done || true
-
-          echo "=== Removing prebuilt test modules ==="
-          find . -name "Android.bp" | xargs grep -l "test_suites" 2>/dev/null | \
-            grep -E "(test|tests)/" | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
 
