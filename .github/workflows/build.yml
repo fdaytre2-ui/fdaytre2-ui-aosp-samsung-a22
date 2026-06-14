@@ -30,38 +30,33 @@ jobs:
           git config --global user.email "moktar@example.com"
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
           mkdir -p $WORK_DIR && cd $WORK_DIR
-
           repo init -u https://android.googlesource.com/platform/manifest \
             -b android-13.0.0_r1 --depth=1 --no-repo-verify
-
           mkdir -p .repo/local_manifests
-          cat > .repo/local_manifests/remove.xml << 'XML'
-<?xml version="1.0" encoding="UTF-8"?>
-<manifest>
-  <remove-project name="platform/external/chromium-webview"/>
-  <remove-project name="platform/external/noto-fonts"/>
-  <remove-project name="platform/external/rust"/>
-  <remove-project name="platform/external/v8"/>
-  <remove-project name="platform/external/skia"/>
-  <remove-project name="platform/external/angle"/>
-  <remove-project name="platform/external/webrtc"/>
-  <remove-project name="platform/external/libchrome"/>
-  <remove-project name="platform/cts"/>
-  <remove-project name="platform/test/suite_harness"/>
-  <remove-project name="platform/test/vts-testcase/hal"/>
-  <remove-project name="platform/art/test"/>
-  <remove-project name="platform/art/compiler"/>
-  <remove-project name="platform/packages/modules/Connectivity"/>
-  <remove-project name="platform/frameworks/libs/net"/>
-  <remove-project name="platform/frameworks/opt/net/wifi"/>
-  <remove-project name="platform/packages/apps/Music"/>
-  <remove-project name="platform/packages/apps/Browser2"/>
-  <remove-project name="platform/tools/treble"/>
-  <remove-project name="platform/tools/trebuchet"/>
-  <remove-project name="platform/kernel/tests"/>
-</manifest>
-XML
-
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n' > .repo/local_manifests/remove.xml
+          printf '<manifest>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/chromium-webview"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/noto-fonts"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/rust"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/v8"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/skia"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/angle"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/webrtc"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/external/libchrome"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/cts"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/test/suite_harness"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/test/vts-testcase/hal"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/art/test"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/art/compiler"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/packages/modules/Connectivity"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/frameworks/libs/net"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/frameworks/opt/net/wifi"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/packages/apps/Music"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/packages/apps/Browser2"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/tools/treble"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/tools/trebuchet"/>\n' >> .repo/local_manifests/remove.xml
+          printf '  <remove-project name="platform/kernel/tests"/>\n' >> .repo/local_manifests/remove.xml
+          printf '</manifest>\n' >> .repo/local_manifests/remove.xml
           repo sync -c -j4 --no-tags --no-clone-bundle --force-sync --retry-fetches=3 || true
           echo "=== Sync done, dirs: $(ls | wc -l) ==="
           df -h .
@@ -70,27 +65,17 @@ XML
         run: |
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
           cd $WORK_DIR
-
-          echo "=== Removing leftover test dirs ==="
           find . -type d -name "tests" | grep -v "\.repo" | xargs rm -rf 2>/dev/null || true
           find . -type d -name "test" | grep -v "\.repo" | xargs rm -rf 2>/dev/null || true
-
-          echo "=== Removing modules depending on cts_defaults ==="
           grep -r "cts_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
-
-          echo "=== Removing modules depending on framework-connectivity-test-defaults ==="
           grep -r "framework-connectivity-test-defaults" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
-
-          echo "=== Removing modules depending on csuite_test ==="
           grep -r "csuite_test" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
-
-          echo "=== Disk after clean ==="
           df -h .
 
       - name: Write Device Tree
