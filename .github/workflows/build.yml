@@ -30,68 +30,63 @@ jobs:
           git config --global user.email "moktar@example.com"
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
           mkdir -p $WORK_DIR && cd $WORK_DIR
+
           repo init -u https://android.googlesource.com/platform/manifest \
             -b android-13.0.0_r1 --depth=1 --no-repo-verify
+
+          mkdir -p .repo/local_manifests
+          cat > .repo/local_manifests/remove.xml << 'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remove-project name="platform/external/chromium-webview"/>
+  <remove-project name="platform/external/noto-fonts"/>
+  <remove-project name="platform/external/rust"/>
+  <remove-project name="platform/external/v8"/>
+  <remove-project name="platform/external/skia"/>
+  <remove-project name="platform/external/angle"/>
+  <remove-project name="platform/external/webrtc"/>
+  <remove-project name="platform/external/libchrome"/>
+  <remove-project name="platform/cts"/>
+  <remove-project name="platform/test/suite_harness"/>
+  <remove-project name="platform/test/vts-testcase/hal"/>
+  <remove-project name="platform/art/test"/>
+  <remove-project name="platform/art/compiler"/>
+  <remove-project name="platform/packages/modules/Connectivity"/>
+  <remove-project name="platform/frameworks/libs/net"/>
+  <remove-project name="platform/frameworks/opt/net/wifi"/>
+  <remove-project name="platform/packages/apps/Music"/>
+  <remove-project name="platform/packages/apps/Browser2"/>
+  <remove-project name="platform/tools/treble"/>
+  <remove-project name="platform/tools/trebuchet"/>
+  <remove-project name="platform/kernel/tests"/>
+</manifest>
+XML
+
           repo sync -c -j4 --no-tags --no-clone-bundle --force-sync --retry-fetches=3 || true
           echo "=== Sync done, dirs: $(ls | wc -l) ==="
           df -h .
 
-      - name: Clean Problematic Modules
+      - name: Clean Remaining Issues
         run: |
           WORK_DIR="$GITHUB_WORKSPACE/aosp_13"
           cd $WORK_DIR
 
-          echo "=== Removing known problematic dirs ==="
-          rm -rf \
-            external/chromium-webview \
-            external/chromium \
-            external/noto-fonts \
-            external/rust \
-            external/v8 \
-            external/skia \
-            external/angle \
-            external/libchrome \
-            external/webrtc \
-            external/googletest \
-            external/libgtest \
-            external/libunwind \
-            external/libcxx/test \
-            external/compiler-rt/test \
-            external/boringssl/src/crypto/test \
-            frameworks/webview \
-            cts \
-            test \
-            kernel/tests \
-            tools/treble \
-            tools/trebuchet \
-            art/test \
-            art/compiler \
-            art/libartpalette \
-            packages/apps/ \
-            packages/tests/ \
-            packages/modules/Connectivity/tests \
-            vendor/*/tests \
-            hardware/*/tests \
-            prebuilts/*/test* \
-            prebuilts/build-tools/tests \
-            2>/dev/null || true
+          echo "=== Removing leftover test dirs ==="
+          find . -type d -name "tests" | grep -v "\.repo" | xargs rm -rf 2>/dev/null || true
+          find . -type d -name "test" | grep -v "\.repo" | xargs rm -rf 2>/dev/null || true
 
-          echo "=== Removing all tests dirs inside packages/modules ==="
-          find packages/modules -type d -name "tests" | xargs rm -rf 2>/dev/null || true
-          find packages/modules -type d -name "test" | xargs rm -rf 2>/dev/null || true
-
-          echo "=== Removing csuite_test dirs ==="
-          grep -r "csuite_test" --include="*.bp" -l 2>/dev/null | while read f; do
-            rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
-          done || true
-
-          echo "=== Removing cts_defaults dirs ==="
+          echo "=== Removing modules depending on cts_defaults ==="
           grep -r "cts_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
 
-          echo "=== Removing art_gtest_defaults dirs ==="
-          grep -r "art_gtest_defaults" --include="*.bp" -l 2>/dev/null | while read f; do
+          echo "=== Removing modules depending on framework-connectivity-test-defaults ==="
+          grep -r "framework-connectivity-test-defaults" --include="*.bp" -l 2>/dev/null | while read f; do
+            rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
+          done || true
+
+          echo "=== Removing modules depending on csuite_test ==="
+          grep -r "csuite_test" --include="*.bp" -l 2>/dev/null | while read f; do
             rm -rf "$(dirname $f)" && echo "Removed: $(dirname $f)"
           done || true
 
